@@ -1,0 +1,12 @@
+# -*- Mode: Makefile; fill-column: 80 -*-
+# $Id: Make.source_lists 54 2012-12-29 08:19:22Z mark $
+
+ifeq (${FROM_TOP},true)
+test01_TARGET:=$(BINDIR)/test01
+else
+test01 :
+	$(MAKE) -C $(SOURCEROOT) $@
+endif
+
+test01_SRCS :=				\
+main.cpp

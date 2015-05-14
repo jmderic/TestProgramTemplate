@@ -1,0 +1,236 @@
+# -*- Mode: Makefile; fill-column: 80 -*-
+# $Id: Make.rules 77 2013-01-01 19:45:49Z mark $
+
+# this file modified from the simplified top level included makefile for PIMCO
+# compliance builds
+
+# sample build line after cd'ing to this directory:
+# /appl/pm/vendor/make/sol-sparc/3.82/bin/make -r -k -j 40
+
+OSTYPE:=$(shell uname -s)
+
+ifneq ($(OSTYPE),SunOS)
+ifneq ($(OSTYPE),Linux)
+$(error "unsupported OSTYPE $(OSTYPE)")
+endif
+endif
+
+PG_SPEC:=$(ENV)# new variable to start eliminating ENV SET_ENV concept
+PG_SPEC_UPPER:=${shell echo $(PG_SPEC) | tr [a-z] [A-Z] }
+
+empty:=# really empty
+space:=${empty} ${empty}# only space
+
+# following handles the case where make is called for multiple command goals.
+# If it is, we want to recursively call make for a single goal so we can set
+# flags, obj directories, etc. correctly for the single target.  The first bit
+# handles the 'all' target
+ifeq (${MAKECMDGOALS},${empty})
+GOALS:=${ALL_GOALS}
+else
+GOALS:=$(MAKECMDGOALS:all=${ALL_GOALS})
+endif
+GOALS:=$(GOALS:clean=${CLEAN_GOALS})
+GOALS:=$(sort ${GOALS})
+ifeq ($(findstring ${space},${GOALS}),${space})
+# make was called for multiple goals
+SINGLE_GOAL:=false
+else
+# make was called for a single goal
+SINGLE_GOAL:=true
+endif
+
+$(info make called for goal: "${GOALS}"; single goal: "${SINGLE_GOAL}"; \
+flags: "${MAKEFLAGS}"; overrides: "${MAKEOVERRIDES}")
+
+ifeq (${SINGLE_GOAL}, false)
+# make was called for multiple goals; call it recursively for each goal
+${GOALS} : 
+	${MAKE} $@
+
+else
+# make called for a single goal
+SRC_DIR := ${CURDIR}
+MAKEFILE_DEPS = Makefile Make.source_lists ${SOURCEROOT}/build_common/Make.rules
+# special fixup for a clean_XXX target
+GOALS:=$(GOALS:clean_%=%)
+
+# Target directory structure
+RELDIR = $(SRC_DIR:$(SOURCEROOT)/%=%)
+# OBJDIR = $(SOURCEROOT)/obj_${GOALS}/$(RELDIR) # only RELDIR use case ??
+# need the above to disambiguate targets of the same name fm different dirs??
+OBJDIR = $(SOURCEROOT)/obj_${GOALS}
+BINDIR = $(SOURCEROOT)/bin
+LIBDIR = $(SOURCEROOT)/lib
+
+ifeq ($(OSTYPE),SunOS)
+
+SYS_LIBS := -lsocket -lm -ldl -lnsl -lrt 
+# wrapper for failed update??
+CXX := /home/vamiot/Documents/Data/ARCHIVES/SolarisStudio12.3-solaris-sparc-bin/solarisstudio12.3/prod/bin/CC
+# typically, CXX is overridden on the make line to point to build host's compiler
+# std: -library=rwtools7_std ; better (but busts): -library=stlport4
+SYS_COMMON_FLAGS := -xs -mt -m64 -xarch=sparcvis2 -O3 +w2 -library=stlport4
+# +w +w2 yield spurrious warnings on Solaris.  Not worth using? Probably worth
+# using w/supression ... geez solaris makes us work hard
+PIC_FLAG := -KPIC
+BOOST_THREAD_LIB := -lboost_thread-mt
+
+else ifeq ($(OSTYPE),Linux)
+
+CXX := g++
+#SYS_CPPFLAGS := -c -Wall -Wextra -O3 std=c++03
+SYS_CPPFLAGS := -c -Wall -Wextra -O3 -std=c++11
+PIC_FLAG := -fPIC
+SYS_DEFINES := -DHAVE_BOOST_REGEX=1
+#BOOST_THREAD_LIB := -lboost_thread
+BOOST_THREAD_LIB := -lboost_thread-mt
+
+endif # SunOS/Linux
+
+# defines pertaining to more than one step of compile, link, or toolchain
+#BOOST_HOME:=/home/mderic/local/boost_1_49_0_sol64
+BOOST_HOME:=/usr/include/boost148
+# can't use Frank Yue's boost at /appl/pm/vendor/boost/sol-sparc_64/1_49_0
+# because we need to link with libs and his is built with the gcc toolchain;
+# this uses the Sol 12.2(boost) & 12.3(this app)
+# typically, this is overridden on the make line to point to build hosts BOOST
+
+#APP_DEFINES = $(${GOALS}_DEFINES) -DIMS_${PG_SPEC_UPPER} -DOWTOOLKIT_WARNING_DISABLED -DNOODBC -DSYS5 -DSOLARIS
+APP_DEFINES = $(SYS_DEFINES) $(${GOALS}_DEFINES)
+
+# includes
+# this used to contain a shopping list of vendor includes which lost visibility
+# into the specific depensdencies of the executables in the suite, hence
+# VENDOR_INCLUDES may be defined here for convenience, but not rolled into
+# INCLUDES, only incorporated via (${GOALS}_INCLUDES)
+INCLUDES = -I. $(${GOALS}_INCLUDES)
+
+# our libs
+# vendor libs
+# specific OUR_LIBS and VENDOR_LIBS may be defined here for convenience, but
+# only included in LINK_LIBS via $(${GOALS}_LIBS) to preserve visibility into
+# dependencies
+
+# debug
+ifeq ($(NO_DEBUG),true)
+CC_DEBUG = -O -DNDEBUG
+else
+CC_DEBUG = -g -D_DEBUG
+endif
+
+# Compiler/Linker Parameters
+RM		= /bin/rm -f
+
+CPPFLAGS = $(SYS_CPPFLAGS) $(CC_DEBUG) $(${GOALS}_CPPFLAGS) $(SYS_COMMON_FLAGS) $(APP_DEFINES)
+
+LD := $(CXX)
+LDFLAGS = $(${GOALS}_LDFLAGS) $(SYS_COMMON_FLAGS)
+
+# JMD_TODO: not even sys libs ... should be on a local makefile basis
+LINK_LIBS = $(${GOALS}_LIBS) $(SYS_LIBS)
+
+# suffix rules
+.SUFFIXES: .idl .cxx .cpp .c .d Plugin.cxx Support.cxx
+
+$(OBJDIR)/%.o:%.c $(OBJDIR)/%.d
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.o:%.cpp $(OBJDIR)/%.d
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.o:%.cxx $(OBJDIR)/%.d
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.d:%.c
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -xM | \
+	sed -e 's:^:$(OBJDIR)/:' > $@
+
+ifeq ($(OSTYPE),SunOS)
+$(OBJDIR)/%.d:%.cpp
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -xM | \
+	sed -e 's:^:$(OBJDIR)/:' > $@
+
+else ifeq ($(OSTYPE),Linux)
+$(OBJDIR)/%.d:%.cpp
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -M | sed -e 's:^$*.o:$(OBJDIR)/$*.o $(OBJDIR)/$*.d:' > $@
+
+endif
+
+$(OBJDIR)/%.d:%.cxx
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -xM | \
+	sed -e 's:^:$(OBJDIR)/:' > $@
+
+# JMD_TODO: update for proto buf
+# following for the RTI idl compiler
+# see http://www.gnu.org/software/automake/manual/html_node/Multiple-Outputs.html#Multiple-Outputs
+%-stamp:%.idl
+	@rm -f $*-temp
+	@touch $*-temp
+	$(NDDSHOME)/scripts/rtiddsgen -namespace -ppNotRun -replace -d . $<
+	@mv -f $*-temp $@
+	@echo "idl compile on $< done"
+
+# following may have trouble with this single goal recursive make implementation
+# without a fix for individual file targets
+%.cxx %Plugin.cxx %Support.cxx %.h %Plugin.h %Support.h:%-stamp
+	@if test -f $@; then echo "$@ already built" ; else \
+	  trap 'rm -rf $*-lock $*-stamp' 1 2 13 15; \
+	  if mkdir $*-lock 2>/dev/null; then \
+	    rm -f $*-stamp; \
+	    $(MAKE) $*-stamp; \
+	    echo "$*.idl invoked for $@"; \
+	    rmdir $*-lock; \
+	  else \
+	    while test -d $*-lock; do sleep 1; done; \
+	    echo "$*.idl waiting for $@"; \
+	    test -f $*-stamp; exit $$?; \
+	  fi; \
+	fi
+
+# generic library and executable targets
+$(OBJDIR)/builddirs :
+	-mkdir -p $(OBJDIR) $(BINDIR) $(LIBDIR)
+	touch $@
+
+# following imports lists of sources (e.g., aceserver_SRCS) to make this file
+# more readable. Also added target definition to this file (e.g.,
+# aceserver_TARGET)
+include Make.source_lists
+
+${GOALS}:	$(${GOALS}_TARGET)
+
+${GOALS}_OBJ1 = $(${GOALS}_SRCS:%.c=$(OBJDIR)/%.o)
+${GOALS}_OBJ2 = $(${GOALS}_OBJ1:%.cpp=$(OBJDIR)/%.o)
+${GOALS}_OBJS = $(${GOALS}_OBJ2:%.cxx=$(OBJDIR)/%.o)
+${GOALS}_DEPS = $(${GOALS}_OBJS:.o=.d)
+
+$(${GOALS}_DEPS) : $(OBJDIR)/builddirs $(MAKEFILE_DEPS) $(${GOALS}_IDL)
+
+$(OBJDIR)/cat_deps : $(${GOALS}_DEPS)
+	cat $^ > $@
+
+# rule updated from using $^ so lib deps could be introduced elsewhere and not
+# included with the objs, but kept with the LINK_LIBS
+$(BINDIR)/${GOALS}: $(${GOALS}_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(${GOALS}_OBJS) $(LINK_LIBS)
+
+$(LIBDIR)/${GOALS}.so: $(${GOALS}_OBJS)
+ifeq ($(OSTYPE),SunOS)
+	$(LD) $(LDFLAGS) -G -o $@ $^
+else ifeq ($(OSTYPE),Linux)
+	$(LD) $(LDFLAGS) -shared -o $@ $^
+endif
+
+# may need to exculde other targets here if we get more typical PHONIES
+ifneq ($(patsubst clean%,clean,${MAKECMDGOALS}),clean)
+ifneq (maketest,${MAKECMDGOALS})
+include $(OBJDIR)/cat_deps
+endif
+endif
+
+clean_${GOALS} ::
+	$(RM) $(${GOALS}_TARGET)
+	$(RM) -r $(OBJDIR)
+
+endif # make called for a single goal

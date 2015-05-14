@@ -1,0 +1,89 @@
+# -*- Mode: Text; fill-column: 80-*-
+
+Notes on building and running:
+
+====================
+BUILDING
+====================
+
+    1) /appl/pm/vendor/make/sol-sparc/3.82/bin/make -r -k -j 4
+
+    2) COMPVER=12.3 builds with the 12.3 compiler, standard, with no variable
+       defined is with the /appl/toolbox/studio12-Feb09/SUNWspro/bin/CC (which
+       may be 12.2).  12.3 is from
+       /home/vamiot/Documents/Data/ARCHIVES/SolarisStudio12.3-solaris-sparc-bin/solarisstudio12.3/prod/bin/CC
+
+Scons building supplement (see also SConstruct):
+Solaris: export BOOST_HOME=/appl/pm/vendor/boost/sol-sparc_64/1_49_0; export CXX=/appl/toolbox/studio12-Feb09/SUNWspro/bin/CC; /home/mderic/local/scons-2.1.0/bin/scons
+export BOOST_HOME=/home/mderic/local/boost_1_49_0_sol64; export PROTOBUF_HOME=/home/mderic/local; export CXX=/appl/toolbox/studio12-Feb09/SUNWspro/bin/CC; /home/mderic/local/scons-2.1.0/bin/scons
+Linux P: export BOOST_HOME=/appl/pm/vendor/boost/lx-x86_64/1_49_0; /home/mderic/local/bin/scons
+Linux: export BOOST_HOME=/home/mark/local; export PROTOBUF_HOME=/home/mark/local; /home/mark/local/bin/scons TT_ODBC=0
+
+change TT_ODBC default to 0
+-c to clean
+
+gcc 4.7.1 compiler:
+export BOOST_HOME=/home/mark/local; export PROTOBUF_HOME=/home/mark/local; export CXX=/home/mark/local/gcc-4.7.1/bin/g++; /home/mark/local/bin/scons -k STD=c++11
+
+export BOOST_HOME=/home/mark/local; export PROTOBUF_HOME=/home/mark/local; export CXX=/home/mark/local/gcc-4.7.1/bin/g++; /home/mark/local/bin/scons STD=c++03
+
+Back to Solaris with JMD 2011 Makefile:
+>>>>broken make v3.82 does not propagate MAKEOVERRIDES to sub-makes, so the following is no good:
+<<<</appl/pm/vendor/make/sol-sparc/3.82/bin/make -r -k -j 40 CXX=/appl/toolbox/studio12-Feb09/SUNWspro/bin/CC
+
+/home/mderic/local/bin/make -r -k -j 40 CXX=/appl/toolbox/studio12-Feb09/SUNWspro/bin/CC BOOST_HOME=/home/mderic/local/boost_1_49_0_sol64
+
+Linux with same:
+make -r -k CXX=/home/mark/local/gcc-4.7.1/bin/g++ BOOST_HOME=/home/mark/local (boost_1_47_0) [1.47 errors out on -std=c++11 with shared_ptr move bust in regex library]
+make -r -k -j 8 CXX=/home/mark/local/gcc-4.7.1/bin/g++ BOOST_HOME=/home/mark/local/boost_1_52_0 [works!!  ... i.e., compiles :-) ]
+
+Linux with with JMD 2011 Makefile, g++ and clang:
+GCC_ROOT=/mnt/share/RHEL5_local/gcc-4.8.1
+make -r -k CXX=/mnt/share/RHEL5_local/gcc-4.8.1/bin/g++ BOOST_HOME=/home/mark/local/boost_1_52_0
+LD_LIBRARY_PATH=$GCC_ROOT/lib:$LD_LIBRARY_PATH
+GCC_ROOT=/mnt/share/RHEL5_local/gcc-4.8.1; LD_LIBRARY_PATH=$GCC_ROOT/lib:$LD_LIBRARY_PATH; make -r -k CXX=/mnt/share/RHEL5_local/llvm-3.3_xtra_20130624_195326/bin/clang++ LD=/mnt/share/RHEL5_local/gcc-4.8.1/bin/g++ BOOST_HOME=/home/mark/local/boost_1_52_0
+
+====================
+RUNNING
+====================
+DS=`date '+%Y%m%d_%H%M%S'`  echo `date '+%Y%m%d_%H%M%S'`
+
+Scons build run line:
+[mderic@aprpmace1 base_reactor_server_jmd]$ export ADHOC_LIBPATH=/home/mderic/pimco_dev/buildroot/base_reactor_server_jmd/lib:/home/mderic/local/boost_1_49_0_sol64/lib:/home/mderic/local/lib/sparcv9:/opt/TimesTen/aprace.tt1122/lib
+[mderic@aprpmace1 base_reactor_server_jmd]$ export LD_LIBRARY_PATH=$ADHOC_LIBPATH
+[mderic@aprpmace1 base_reactor_server_jmd]$ ./bin/base_server -l$BUILDROOT/run`date '+%Y%m%d_%H%M%S'`.log -p7666 -vDEBUG
+
+Better Solaris:
+export BUILDROOT=`pwd`; export ADHOC_LIBPATH=$BUILDROOT/lib:/home/mderic/local/boost_1_49_0_sol64/lib:/home/mderic/local/lib/sparcv9:/opt/TimeTesn/aprace.tt1122/lib; export LD_LIBRARY_PATH=$ADHOC_LIBPATH
+$BUILDROOT/bin/base_server -l $BUILDROOT/run.log -p7666 -vDEBUG
+
+[mderic@aprpmace1 base_reactor_server019ex]$ export BUILDROOT=`pwd`; export ADHOC_LIB_PATH=/home/mderic/local/boost_1_49_0_sol64/lib:/home/mderic/local/lib/sparcv9:/opt/TimesTen/aprace.tt1122/lib; source ./lib_path_runtime_fixup.sh
+[mderic@aprpmace1 base_reactor_server019ex]$ ./bin/base_server -l $BUILDROOT/run.log
+
+Back to Solaris with JMD 2011 Makefile run line:
+[mderic@aprpmace1 base_sybase_reactor_server]$ export BUILDROOT=`pwd`; export ADHOC_LIB_PATH=/home/mderic/local/boost_1_49_0_sol64/lib:/home/mderic/local/lib/sparcv9; source ./lib_path_runtime_fixup.sh
+[mderic@aprpmace1 base_sybase_reactor_server]$ ./bin/base_server -l$BUILDROOT/run`date '+%Y%m%d_%H%M%S'`.log -p7666 -vDEBUG
+
+Linux with JMD 2011 Makefile run line (should be scons best, too):
+[mark@laguna06 base_reactor_server]$ export BUILDROOT=`pwd`; export ADHOC_LIB_PATH=/home/mark/local/lib:/home/mark/local/gcc-4.7.1/lib; source ./lib_path_runtime_fixup.sh
+[mark@laguna06 base_reactor_server]$ ./bin/base_server -l$BUILDROOT/run`date '+%Y%m%d_%H%M%S'`.log -p7666 -vDEBUG
+
+boost_1_52_0
+export BUILDROOT=`pwd`; export ADHOC_LIB_PATH=/home/mark/local/boost_1_52_0/lib:/home/mark/local/gcc-4.7.1/lib; source ./lib_path_runtime_fixup.sh
+$BUILDROOT/bin/base_server -l$BUILDROOT/base_server_`date '+%Y%m%d_%H%M%S'`.log -p7666 -vDEBUG
+$BUILDROOT/bin/bs_test001 -l$BUILDROOT/bs_test001_`date '+%Y%m%d_%H%M%S'`.log -vDEBUG
+$BUILDROOT/bin/base_client -h
+
+
+====================
+Doxygen
+====================
+
+doxygen Doxyfile > doxygen.log 2>&1
+
+====================
+TODO
+====================
+
+Make clean on pim Make Linux
+Check dep autogen for correctness on pim Make Linux
