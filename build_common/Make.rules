@@ -80,7 +80,7 @@ else ifeq ($(OSTYPE),Linux)
 
 CXX := g++
 #SYS_CPPFLAGS := -c -Wall -Wextra -O3 std=c++03
-SYS_CPPFLAGS := -c -Wall -Wextra -O3 -std=c++11
+SYS_CPPFLAGS := -c -Wall -Wextra -pedantic -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=5 -Wundef -Wno-unused -Wno-variadic-macros -Wno-parentheses -fdiagnostics-show-option -O3 -std=c++11
 PIC_FLAG := -fPIC
 SYS_DEFINES := -DHAVE_BOOST_REGEX=1
 #BOOST_THREAD_LIB := -lboost_thread

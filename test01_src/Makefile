@@ -46,9 +46,10 @@ $(BINDIR)/test01 : ${test01_JMDLIBLIST:%=$(LIBDIR)/lib%.so}
 # current list of items we can add to on a target by target basis; other items
 # can be added but must be templated (i.e., $(${GOALS}_LIBS) ) in Make.rules
 test01_DEFINES :=
-test01_INCLUDES := -I../nucleus -I../logging -I../reactor -I../process -I$(BOOST_HOME)
+#test01_INCLUDES := -I../nucleus -I../logging -I../reactor -I../process -I$(BOOST_HOME)
+test01_INCLUDES :=
 #test01_LIBS := -L../lib ${test01_JMDLIBLIST:%=-l%} -L$(BOOST_HOME)/lib -lboost_program_options -lboost_regex $(BOOST_THREAD_LIB) -lboost_system
-test01_LIBS := -L../lib ${test01_JMDLIBLIST:%=-l%} -L/usr/lib/boost148 -lboost_program_options -lboost_regex $(BOOST_THREAD_LIB) -lboost_system
+test01_LIBS :=
 ### test01_CPPFLAGS := -library=rwtools7_std -xpagesize=4M -xprefetch_level=2
 ### test01_LDFLAGS := -library=rwtools7_std -xpagesize=4M -xprefetch_level=2
 
