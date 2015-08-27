@@ -43,6 +43,9 @@ make -r -k CXX=/mnt/share/RHEL5_local/gcc-4.8.1/bin/g++ BOOST_HOME=/home/mark/lo
 LD_LIBRARY_PATH=$GCC_ROOT/lib:$LD_LIBRARY_PATH
 GCC_ROOT=/mnt/share/RHEL5_local/gcc-4.8.1; LD_LIBRARY_PATH=$GCC_ROOT/lib:$LD_LIBRARY_PATH; make -r -k CXX=/mnt/share/RHEL5_local/llvm-3.3_xtra_20130624_195326/bin/clang++ LD=/mnt/share/RHEL5_local/gcc-4.8.1/bin/g++ BOOST_HOME=/home/mark/local/boost_1_52_0
 
+emacs line:
+PATH=/mnt/share/RHEL5_local/gcc-4.8.1/bin:$PATH make -rk
+
 ====================
 RUNNING
 ====================
