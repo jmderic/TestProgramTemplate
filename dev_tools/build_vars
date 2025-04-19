@@ -1,0 +1,37 @@
+# -*- mode: sh; sh-shell: bash; fill-column: 88 -*-
+# this file is to be sourced
+
+# this version of build_vars is for developer use; no provision for use by Jenkins
+
+# two cases: 1) with no BLD_DIR environment variable -> new build; 2) if BLD_DIR is
+# passed in -> re-build/re-run
+
+
+RESTORE_SET_X=$(set +o |grep xtrace)
+set -x
+
+SOURCE_DIR=$(dirname $(readlink -e "${BASH_SOURCE[0]}"))
+TOP=$(readlink -e "$SOURCE_DIR/..")
+WORKSPACE=$(readlink -e "$TOP/..")
+export DS=$(date '+%Y%m%d_%H%M%S')
+
+NEW_BUILD=true
+if [ "$BLD_DIR" ]; then
+    NEW_BUILD=false
+else
+    export BLD_DIR="$WORKSPACE/build_$DS"
+    mkdir -p "$BLD_DIR"
+fi
+LOG_FILE=$BLD_DIR/${DS}_${BLD_TYPE:-XXX}.log
+exec &> >(tee -a "$LOG_FILE")
+
+# to appear in the log file
+: TOP=$TOP
+: WORKSPACE=$WORKSPACE
+: BLD_DIR=$BLD_DIR
+: LOG_FILE=$LOG_FILE
+
+export BLD_DIR
+export LOG_FILE
+
+$RESTORE_SET_X
